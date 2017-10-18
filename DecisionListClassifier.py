@@ -21,25 +21,67 @@ from nltk.metrics import ConfusionMatrix
 from nltk import pos_tag
 
 class DecisionListClassifier(object):
+    """
+    The decision list is a sorted list of tuples of the following form:
+        (sense, feature, log-likelihood)
+    sorted by log-likelihood.
 
-    def __init__(self, train_corp):
+    Can be used to make a binary word sense disambiguation.
+    """
 
-        self.word = ''
-        self.word_star = ''
-        self.decision_list = [] # [(sense, feature, log-likelihood), ...]
-        self.majority_baseline = '' # word or word_star
-        self.word_count = 0
-        self.word_star_count = 0
-        self.word_count_total = 0
+    def __init__(self, sense_pairs, max_collocation=3):
+        """
+        Construct a new decision list classifier from a list of tuples
+        of the form:
+            (sense, [context_tokens])
+        where the sense is a unquie identifier of the sense of the target word.
+        Example:
+            [('bass', ['the','large','bass','swam','down','river']),
+             ('*bass', ['the', 'bass', 'was', 'very', 'loud']), ...
+            ]
 
-        # object to store results data
-        self.result = {}
-        self.result["correct_count"] = 0
-        self.result["incorrect_count"] = 0
-        self.result["percent_correct"] = 0
-        self.sample_size = 3
+        :type sense_pairs: A list
+        :param sense_pairs: A list of word sense and context words
+            in the above form.
+        :type max_collocation: An integer
+        :param max_collocation: When training the model, use this value
+            as the maximum number of tokens to generate ngrams for.
+            Example: 0 means only train with unigrams, 1 means train with
+            bigrams 1 left and right of target word and unigrams, etc...
+        :raise ValueError: If there is anything but 2 word senses in
+            ``sense_pair``.
+        """
 
-        self.train(train_corp)
+        # check number of word senses
+        word_senses = set([w[0] for w in sense_pairs])
+        if len(word_senses) != 2:
+            raise ValueError('There can only be 2 word senses')
+
+        # find majority word sense (can use as basline)
+        word_sense_count = 0
+        word_sense_star_count = 0
+        word_sense_majority = ''
+        for w in sense_pairs:
+            if w == word_senses[0]:
+                word_sense_count +=1
+            else:
+                word_sense_star_count +=1
+
+        if word_sense_count/(word_sense_star_count+word_sense_count) > \
+            word_sense_star_count/(word_sense_star_count+word_sense_count) :
+            word_sense_majority = word_senses[0]
+        else:
+            word_sense_majority = word_senses[1]
+
+        # make the decision list
+        dl = self.train(sense_pairs, max_collocation)
+
+        # set word senses
+        self.word = word_senses[0]
+        self.word_star = word_senses[1]
+        self.majority_word = word_sense_majority
+        # set the decision list
+        self._decision_list = dl
 
     def report(self):
         print("\nMajority baseline sense label: {}".format(self.result["majority_baseline"]))
@@ -160,24 +202,28 @@ class DecisionListClassifier(object):
 
         return sense
 
-    def train(self, train_corp):
+    def train(self, sense_pairs, max_collocation):
+        """
+        Returns a decision list using Yarowsky's log-likelihood decision list
+        algorithm.
 
-        # pre-process corpus
-        # [(sense, [tokens]), ...]
-        corpus = self.preprocess_corpus(train_corp)
-
+        :type sense_pairs: A list
+        :param sense_pairs: A list of tuples containing word sense and context
+            tokens.
+        :type max_collocation: An integer
+        :param max_collocation: When training the model, use this value
+            as the maximum number of tokens to generate ngrams for.
+            Example: 0 means only train with unigrams, 1 means train with
+            bigrams 1 left and right of target word and unigrams, etc...
+        """
         # matrix of features * sense and their counts
         # fc[feature][sense] => count
         freqs = ConditionalFreqDist()
 
         # count stuff
-        for row in corpus:
+        for pair in sense_pairs:
 
-            # basic counting
-            if row[0] == self.word:
-                self.word_count += 1
-            else:
-                self.word_star_count += 1
+            freqs[feature][sense] += 1
 
             # count the n-grams
             self.add_feature(freqs, row[0], self.collocate(self.word, row[1], 0, 0)) # unigrams
@@ -224,7 +270,6 @@ class DecisionListClassifier(object):
             self.decision_list.append((sense, feature, abs(d)))
 
     def add_feature(self, freqs, sense, feature):
-        freqs[feature][sense] += 1
 
     def parts_of_speech(self, tokens):
         b = tokens.index(self.word)
@@ -232,6 +277,15 @@ class DecisionListClassifier(object):
         c[b] = self.word
         return c
 
+    def generate_ngrams(self, word, tokens, max_collocations):
+        """
+
+        :raise ValueError: if ``word`` not in ``tokens``.
+        """
+        ngrams = []
+        w = tokens.index(word)
+        for left in range(wmax_collocations):
+            ngrams.append('_'.join(tokens[p-left:p] + [word] + tokens[p:p+right]))
     def collocate(self, word, tokens, left, right):
         p = tokens.index(word)
         return '_'.join(tokens[p-left:p] + [word] + tokens[p:p+right])
