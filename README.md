@@ -1,6 +1,6 @@
 # DecisionListClassifier
 
-An implementation of Yarowsky's[[1](#cite1)] log-likelihood algorithm for decision lists.
+An implementation of Yarowsky's[[1](#1)] log-likelihood algorithm for decision lists.
 
 ```
 >>> from classifiers import DecisionListClassifier
@@ -17,10 +17,11 @@ Run `$ python test.py` to see example result + how it works.
 `git clone https://github.com/glebpro/decisionlistclassifier.git`
 
 ## Requirements
-Python >= 2.7 or >= 3.4
+Python >= 3.4
 
 ## License
 MIT licensed. See the bundled [LICENSE](/LICENSE) file for more details.
 
 <hr>
-[[1](#cite1)]<i>Yarowsky, D. (1994, June). Decision lists for lexical ambiguity resolution: Application to accent restoration in Spanish and French. In Proceedings of the 32nd annual meeting on Association for Computational Linguistics (pp. 88-95). Association for Computational Linguistics.</i>
+###### 1
+<i>Yarowsky, D. (1994, June). Decision lists for lexical ambiguity resolution: Application to accent restoration in Spanish and French. In Proceedings of the 32nd annual meeting on Association for Computational Linguistics (pp. 88-95). Association for Computational Linguistics.</i>
