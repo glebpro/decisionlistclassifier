@@ -1,7 +1,6 @@
 # DecisionListClassifier
 
 An implementation of Yarowsky's<sup>1</sup> log-likelihood algorithm for decision lists.
-Useful for word sense disambiguation.
 
 ```
 >>> from classifiers import DecisionListClassifier
